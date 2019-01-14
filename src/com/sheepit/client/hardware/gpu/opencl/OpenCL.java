@@ -105,15 +105,12 @@ public class OpenCL implements GPULister {
 			}
 			
 			for (int j = 0; j < device_count.getValue(); j++) {
-				String platform_vendor = getInfoPlatform(lib, plateforms[i], OpenCLLib.CL_PLATFORM_VENDOR);
-				if (platform_vendor != null && platform_vendor.toLowerCase().equals("advanced micro devices, inc.")) { // opencl is only used for amd gpus
-					String name = getInfodeviceString(lib, devices[j], OpenCLLib.CL_DEVICE_BOARD_NAME_AMD);
-					long vram = getInfodeviceLong(lib, devices[j], OpenCLLib.CL_DEVICE_GLOBAL_MEM_SIZE);
-					if (name != null && vram > 0) {
-						available_devices.add(new GPUDevice(TYPE, name, vram, TYPE + "_" + id));
-					}
+				System.out.println("blenderID " + getBlenderId(lib, devices[j]));
+				String name = getInfodeviceString(lib, devices[j], OpenCLLib.CL_DEVICE_BOARD_NAME_AMD);
+				long vram = getInfodeviceLong(lib, devices[j], OpenCLLib.CL_DEVICE_GLOBAL_MEM_SIZE);
+				if (name != null && vram > 0) {
+					available_devices.add(new GPUDevice(TYPE, new String(name).trim(), vram, getBlenderId(lib, devices[j])));
 				}
-				id++;
 			}
 		}
 		
@@ -157,5 +154,17 @@ public class OpenCL implements GPULister {
 		}
 		
 		return new String(name).trim();
+	}
+	
+	private static String getBlenderId(OpenCLLib lib, CLDeviceId.ByReference device) {
+		byte topology[] = new byte[24];
+		
+		int status = lib.clGetDeviceInfo(device, 0x4037, 24, topology, null);
+		if (status != OpenCLLib.CL_SUCCESS) {
+			System.out.println("OpenCL::getBlenderId failed(I) status: " + status);
+			return "";
+		}
+		
+		return String.format("%02x:%02x.%01x", topology[21], topology[22], topology[23]);
 	}
 }
